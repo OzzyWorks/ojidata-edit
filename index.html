@@ -2,62 +2,252 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>おじbotデータ メンテナンス</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>おじbotメンテ</title>
     <style>
-        body { font-family: sans-serif; padding: 20px; }
-        table { border-collapse: collapse; width: 100%; margin-top: 20px; }
-        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-        th { background-color: #f4f4f4; }
-        .form-section { background: #f9f9f9; padding: 15px; border-radius: 5px; }
+        :root {
+            --ios-blue: #007AFF;
+            --ios-bg: #F2F2F7;
+            --ios-card: #FFFFFF;
+            --ios-sep: #C6C6C8;
+            --ios-danger: #FF3B30;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--ios-bg);
+            margin: 0;
+            padding-bottom: 100px;
+            color: #000;
+        }
+
+        /* ヘッダー */
+        .header {
+            position: sticky;
+            top: 0;
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(10px);
+            padding: 20px 16px 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 0.5px solid var(--ios-sep);
+            z-index: 100;
+        }
+
+        .header h1 {
+            font-size: 34px;
+            font-weight: 700;
+            margin: 0;
+        }
+
+        /* 追加ボタン（浮遊） */
+        .fab {
+            position: fixed;
+            bottom: 30px;
+            right: 20px;
+            background-color: var(--ios-blue);
+            color: white;
+            width: 60px;
+            height: 60px;
+            border-radius: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 30px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            border: none;
+            z-index: 99;
+        }
+
+        /* リスト表示 */
+        .list-container {
+            padding: 16px;
+        }
+
+        .card {
+            background: var(--ios-card);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            position: relative;
+        }
+
+        .card-date {
+            font-size: 13px;
+            color: var(--ios-blue);
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .card-info1 {
+            font-size: 17px;
+            font-weight: 600;
+        }
+
+        .card-info2 {
+            font-size: 15px;
+            color: #666;
+        }
+
+        .card-actions {
+            margin-top: 10px;
+            display: flex;
+            gap: 10px;
+            border-top: 0.5px solid #eee;
+            padding-top: 10px;
+        }
+
+        .btn-edit { color: var(--ios-blue); background: none; border: none; font-size: 15px; padding: 5px; }
+        .btn-delete { color: var(--ios-danger); background: none; border: none; font-size: 15px; padding: 5px; }
+
+        /* モーダル (入力フォーム) */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: flex-end;
+        }
+
+        .modal-content {
+            background: var(--ios-card);
+            width: 100%;
+            border-radius: 15px 15px 0 0;
+            padding: 20px;
+            box-sizing: border-box;
+            animation: slideUp 0.3s ease-out;
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
+        }
+
+        .input-group {
+            margin-bottom: 15px;
+        }
+
+        label { font-size: 12px; color: #888; margin-left: 5px; }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            margin-top: 5px;
+            border: 1px solid var(--ios-sep);
+            border-radius: 8px;
+            font-size: 16px; /* iPhoneでズームされないためのサイズ */
+            box-sizing: border-box;
+            background: #F9F9F9;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .btn-save {
+            flex: 1;
+            background: var(--ios-blue);
+            color: white;
+            border: none;
+            padding: 15px;
+            border-radius: 10px;
+            font-weight: 600;
+        }
+
+        .btn-cancel {
+            flex: 1;
+            background: #E5E5EA;
+            color: #000;
+            border: none;
+            padding: 15px;
+            border-radius: 10px;
+        }
+
+        /* ローディング */
+        #loader {
+            text-align: center;
+            padding: 20px;
+            color: #888;
+        }
     </style>
 </head>
 <body>
 
-<h1>おじbotデータ メンテナンス</h1>
-
-<div class="form-section">
-    <h3>データの追加・更新</h3>
-    <input type="hidden" id="edit-index">
-    日付: <input type="text" id="date" placeholder="2026/01/09"><br><br>
-    情報1: <input type="text" id="info1"><br><br>
-    情報2: <input type="text" id="info2"><br><br>
-    <button onclick="saveData()">保存</button>
-    <button onclick="clearForm()">クリア</button>
+<div class="header">
+    <h1>データ管理</h1>
 </div>
 
-<table id="data-table">
-    <thead>
-        <tr>
-            <th>日付</th><th>情報1</th><th>情報2</th><th>操作</th>
-        </tr>
-    </thead>
-    <tbody></tbody>
-</table>
+<div id="loader">読み込み中...</div>
+<div id="list-container" class="list-container"></div>
+
+<button class="fab" onclick="openModal()">+</button>
+
+<div id="modal" class="modal">
+    <div class="modal-content">
+        <h3 id="modal-title" style="margin-top:0">新規追加</h3>
+        <input type="hidden" id="edit-index">
+        <div class="input-group">
+            <label>日付</label>
+            <input type="text" id="date" placeholder="2026/01/10">
+        </div>
+        <div class="input-group">
+            <label>情報1</label>
+            <input type="text" id="info1" placeholder="内容を入力">
+        </div>
+        <div class="input-group">
+            <label>情報2</label>
+            <input type="text" id="info2" placeholder="詳細を入力">
+        </div>
+        <div class="modal-buttons">
+            <button class="btn-cancel" onclick="closeModal()">キャンセル</button>
+            <button class="btn-save" onclick="saveData()">保存</button>
+        </div>
+    </div>
+</div>
 
 <script>
     const GAS_URL = "https://script.google.com/macros/s/AKfycbzBUANdavKuD9LMXFHhwEDwhO_zWlKF6oU76Rs1w9vgg930AM3Z-fFvmXO3bSQPih3x/exec";
 
-    // 読み込み時に一覧表示
     window.onload = loadData;
 
     async function loadData() {
-        const res = await fetch(GAS_URL, {
-            method: "POST",
-            body: JSON.stringify({ action: "read" })
-        });
-        const data = await res.json();
-        const tbody = document.querySelector("#data-table tbody");
-        tbody.innerHTML = "";
+        document.getElementById("loader").style.display = "block";
+        try {
+            const res = await fetch(GAS_URL, {
+                method: "POST",
+                body: JSON.stringify({ action: "read" })
+            });
+            const data = await res.json();
+            renderList(data);
+        } catch (e) {
+            alert("データの取得に失敗しました");
+        }
+        document.getElementById("loader").style.display = "none";
+    }
+
+    function renderList(data) {
+        const container = document.getElementById("list-container");
+        container.innerHTML = "";
         data.forEach((row, index) => {
-            const tr = document.createElement("tr");
-            tr.innerHTML = `
-                <td>${row[0]}</td><td>${row[1]}</td><td>${row[2]}</td>
-                <td>
-                    <button onclick="editRow(${index}, '${row[0]}', '${row[1]}', '${row[2]}')">編集</button>
-                    <button onclick="deleteRow(${index})">削除</button>
-                </td>
+            const card = document.createElement("div");
+            card.className = "card";
+            card.innerHTML = `
+                <div class="card-date">${row[0]}</div>
+                <div class="card-info1">${row[1]}</div>
+                <div class="card-info2">${row[2]}</div>
+                <div class="card-actions">
+                    <button class="btn-edit" onclick="editRow(${index}, '${row[0]}', '${row[1]}', '${row[2]}')">編集</button>
+                    <button class="btn-delete" onclick="deleteRow(${index})">削除</button>
+                </div>
             `;
-            tbody.appendChild(tr);
+            container.appendChild(card);
         });
     }
 
@@ -70,20 +260,36 @@
             info1: document.getElementById("info1").value,
             info2: document.getElementById("info2").value
         };
+        
+        closeModal();
+        document.getElementById("loader").style.display = "block";
+        
         await fetch(GAS_URL, { method: "POST", body: JSON.stringify(payload) });
-        clearForm();
         loadData();
     }
 
+    function openModal() {
+        document.getElementById("modal-title").innerText = "新規追加";
+        clearForm();
+        document.getElementById("modal").style.display = "flex";
+    }
+
+    function closeModal() {
+        document.getElementById("modal").style.display = "none";
+    }
+
     function editRow(index, date, i1, i2) {
+        document.getElementById("modal-title").innerText = "データを編集";
         document.getElementById("edit-index").value = index;
         document.getElementById("date").value = date;
         document.getElementById("info1").value = i1;
         document.getElementById("info2").value = i2;
+        document.getElementById("modal").style.display = "flex";
     }
 
     async function deleteRow(index) {
-        if (!confirm("本当に削除しますか？")) return;
+        if (!confirm("この項目を削除してもよろしいですか？")) return;
+        document.getElementById("loader").style.display = "block";
         await fetch(GAS_URL, {
             method: "POST",
             body: JSON.stringify({ action: "delete", index: index })
