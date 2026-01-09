@@ -32,15 +32,14 @@
             z-index: 100;
             display: flex;
             align-items: center;
-            justify-content: center; /* 中央揃え */
+            justify-content: center;
             gap: 10px;
         }
 
-        /* アイコン画像 */
         .header-icon {
             width: 32px;
             height: 32px;
-            border-radius: 50%; /* 画像を丸くする */
+            border-radius: 50%;
             object-fit: cover;
             border: 1px solid var(--ios-sep);
         }
@@ -246,7 +245,7 @@
 </div>
 
 <script>
-    const GAS_URL = "https://script.google.com/macros/s/AKfycbya7kTcxeF6LQLzwNdrlNk5ZQAAh51NeRFBk0hIdmMzAY3JT8XGZCg5VEqOtmnK-LAG/exec";
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbzBUANdavKuD9LMXFHhwEDwhO_zWlKF6oU76Rs1w9vgg930AM3Z-fFvmXO3bSQPih3x/exec";
 
     window.onload = loadData;
 
@@ -254,9 +253,9 @@
     function hideLoader() { document.getElementById("loader-overlay").style.display = "none"; }
 
     function formatDate(dateStr) {
-        if (!dateStr) return "";
+        if (!dateStr || dateStr === "" || dateStr === "null") return null;
         const date = new Date(dateStr);
-        if (isNaN(date.getTime())) return dateStr;
+        if (isNaN(date.getTime())) return null;
         const y = date.getFullYear();
         const m = date.getMonth() + 1;
         const d = date.getDate();
@@ -291,12 +290,16 @@
         const container = document.getElementById("list-container");
         container.innerHTML = "";
         data.forEach((row, index) => {
+            // A列(日付)が存在しない、または空文字の場合はスキップ
+            const formattedDate = formatDate(row[0]);
+            if (!row[0] || formattedDate === null) return;
+
             const card = document.createElement("div");
             card.className = "card";
             card.innerHTML = `
                 <div class="card-content">
-                    <div class="card-date">${formatDate(row[0])}</div>
-                    <div class="card-info1">${row[1]}</div>
+                    <div class="card-date">${formattedDate}</div>
+                    <div class="card-info1">${row[1] || ''}</div>
                     <div class="card-info2">${row[2] || ''}</div>
                 </div>
                 <div class="card-actions">
