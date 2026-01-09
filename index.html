@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>おじbotデータ メンテナンス</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; }
+        table { border-collapse: collapse; width: 100%; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f4f4f4; }
+        .form-section { background: #f9f9f9; padding: 15px; border-radius: 5px; }
+    </style>
+</head>
+<body>
+
+<h1>おじbotデータ メンテナンス</h1>
+
+<div class="form-section">
+    <h3>データの追加・更新</h3>
+    <input type="hidden" id="edit-index">
+    日付: <input type="text" id="date" placeholder="2026/01/09"><br><br>
+    情報1: <input type="text" id="info1"><br><br>
+    情報2: <input type="text" id="info2"><br><br>
+    <button onclick="saveData()">保存</button>
+    <button onclick="clearForm()">クリア</button>
+</div>
+
+<table id="data-table">
+    <thead>
+        <tr>
+            <th>日付</th><th>情報1</th><th>情報2</th><th>操作</th>
+        </tr>
+    </thead>
+    <tbody></tbody>
+</table>
+
+<script>
+    const GAS_URL = "ここにデプロイしたウェブアプリのURLを貼る";
+
+    // 読み込み時に一覧表示
+    window.onload = loadData;
+
+    async function loadData() {
+        const res = await fetch(GAS_URL, {
+            method: "POST",
+            body: JSON.stringify({ action: "read" })
+        });
+        const data = await res.json();
+        const tbody = document.querySelector("#data-table tbody");
+        tbody.innerHTML = "";
+        data.forEach((row, index) => {
+            const tr = document.createElement("tr");
+            tr.innerHTML = `
+                <td>${row[0]}</td><td>${row[1]}</td><td>${row[2]}</td>
+                <td>
+                    <button onclick="editRow(${index}, '${row[0]}', '${row[1]}', '${row[2]}')">編集</button>
+                    <button onclick="deleteRow(${index})">削除</button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    async function saveData() {
+        const index = document.getElementById("edit-index").value;
+        const payload = {
+            action: index === "" ? "create" : "update",
+            index: parseInt(index),
+            date: document.getElementById("date").value,
+            info1: document.getElementById("info1").value,
+            info2: document.getElementById("info2").value
+        };
+        await fetch(GAS_URL, { method: "POST", body: JSON.stringify(payload) });
+        clearForm();
+        loadData();
+    }
+
+    function editRow(index, date, i1, i2) {
+        document.getElementById("edit-index").value = index;
+        document.getElementById("date").value = date;
+        document.getElementById("info1").value = i1;
+        document.getElementById("info2").value = i2;
+    }
+
+    async function deleteRow(index) {
+        if (!confirm("本当に削除しますか？")) return;
+        await fetch(GAS_URL, {
+            method: "POST",
+            body: JSON.stringify({ action: "delete", index: index })
+        });
+        loadData();
+    }
+
+    function clearForm() {
+        document.getElementById("edit-index").value = "";
+        document.getElementById("date").value = "";
+        document.getElementById("info1").value = "";
+        document.getElementById("info2").value = "";
+    }
+</script>
+</body>
+</html>
