@@ -11,6 +11,7 @@
             --ios-card: #FFFFFF;
             --ios-sep: #C6C6C8;
             --ios-danger: #FF3B30;
+            --ios-gray: #8E8E93;
         }
 
         body {
@@ -19,6 +20,8 @@
             margin: 0;
             padding-bottom: 100px;
             color: #000;
+            /* スムーズスクロールを有効化 */
+            scroll-behavior: smooth;
         }
 
         /* ヘッダー */
@@ -112,6 +115,22 @@
             align-items: center;
             gap: 10px;
             box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            transition: opacity 0.3s, background-color 0.3s;
+        }
+
+        /* 過去のスケジュールをグレーアウト */
+        .card.expired {
+            background: #E5E5EA;
+            opacity: 0.6;
+        }
+        
+        .card.expired .card-date {
+            color: var(--ios-gray);
+        }
+
+        /* 最新（スクロール先）の強調表示用（必要に応じて） */
+        .card.latest-focus {
+            border: 1px solid var(--ios-blue);
         }
 
         .card-content {
@@ -289,16 +308,42 @@
     function renderList(data) {
         const container = document.getElementById("list-container");
         container.innerHTML = "";
-        data.forEach((row, index) => {
-            // A列(日付)が存在しない、または空文字の場合はスキップ
+
+        // 本日の日付（比較用） 00:00:00に設定
+        const now = new Date();
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+        // 有効な日付を持つデータだけを抽出し、元のインデックスを保持
+        const items = data
+            .map((row, index) => ({ row, originalIndex: index }))
+            .filter(item => item.row[0] && !isNaN(new Date(item.row[0]).getTime()));
+
+        // ★降順ソートを廃止（元の順番で表示）
+
+        let latestTargetId = null;
+
+        items.forEach((item, i) => {
+            const row = item.row;
+            const index = item.originalIndex;
             const formattedDate = formatDate(row[0]);
-            if (!row[0] || formattedDate === null) return;
+            
+            // 過去日判定
+            const itemDate = new Date(row[0]);
+            const isExpired = itemDate < today;
+
+            // スクロール先（最新行）の判定ロジック：
+            // 今日以降の予定で最初に見つかったもの、または最後に見つかった有効な行
+            const cardId = `card-${index}`;
+            if (!isExpired && latestTargetId === null) {
+                latestTargetId = cardId; // 最初に見つかった「今日以降」の行
+            }
 
             const card = document.createElement("div");
-            card.className = "card";
+            card.id = cardId;
+            card.className = `card ${isExpired ? 'expired' : ''}`;
             card.innerHTML = `
                 <div class="card-content">
-                    <div class="card-date">${formattedDate}</div>
+                    <div class="card-date">${formattedDate}${isExpired ? ' (終了)' : ''}</div>
                     <div class="card-info1">${row[1] || ''}</div>
                     <div class="card-info2">${row[2] || ''}</div>
                 </div>
@@ -308,14 +353,32 @@
                 </div>
             `;
             container.appendChild(card);
+            
+            // 全て過去日の場合は最後の行をターゲットにする
+            if (i === items.length - 1 && latestTargetId === null) {
+                latestTargetId = cardId;
+            }
         });
+
+        // 描画後にスクロールを実行
+        if (latestTargetId) {
+            setTimeout(() => {
+                const targetElement = document.getElementById(latestTargetId);
+                if (targetElement) {
+                    targetElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    // 少し強調する
+                    targetElement.classList.add('latest-focus');
+                    setTimeout(() => targetElement.classList.remove('latest-focus'), 2000);
+                }
+            }, 300);
+        }
     }
 
     async function saveData() {
         const index = document.getElementById("edit-index").value;
         const payload = {
             action: index === "" ? "create" : "update",
-            index: parseInt(index),
+            index: index === "" ? null : parseInt(index),
             date: document.getElementById("date").value,
             info1: document.getElementById("info1").value,
             info2: document.getElementById("info2").value
@@ -323,8 +386,13 @@
         
         closeModal();
         showLoader();
-        await fetch(GAS_URL, { method: "POST", body: JSON.stringify(payload) });
-        loadData();
+        try {
+            await fetch(GAS_URL, { method: "POST", body: JSON.stringify(payload) });
+            await loadData();
+        } catch (e) {
+            alert("保存に失敗しました");
+            hideLoader();
+        }
     }
 
     function openModal() {
@@ -350,11 +418,16 @@
     async function deleteRow(index) {
         if (!confirm("この項目を削除してもよろしいですか？")) return;
         showLoader();
-        await fetch(GAS_URL, {
-            method: "POST",
-            body: JSON.stringify({ action: "delete", index: index })
-        });
-        loadData();
+        try {
+            await fetch(GAS_URL, {
+                method: "POST",
+                body: JSON.stringify({ action: "delete", index: index })
+            });
+            await loadData();
+        } catch (e) {
+            alert("削除に失敗しました");
+            hideLoader();
+        }
     }
 
     function clearForm() {
